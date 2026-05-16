@@ -1,68 +1,149 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import Link from 'next/link'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap } from 'lucide-react'
+import { Zap, MapPin, Mail } from 'lucide-react'
+
+const LINKS = {
+  Platform: [
+    { label: 'Features',    href: '/features'   },
+    { label: 'Industries',  href: '/use-cases'  },
+    { label: 'Live Demo',   href: '/demo'       },
+    { label: 'Install App', href: '/install'    },
+  ],
+  Company: [
+    { label: 'Contact Us',  href: '/contact'    },
+    { label: 'Get a Quote', href: '/onboarding' },
+  ],
+}
 
 export function Footer() {
-  const router   = useRouter()
-  const [taps,   setTaps]   = useState(0)
-  const [flash,  setFlash]  = useState(false)
+  const [tapCount, setTapCount] = useState(0)
+  const router = useRouter()
 
-  // 5-tap easter egg on the logo to reach admin
-  const handleLogoTap = useCallback(async () => {
-    const next = taps + 1
-    setTaps(next)
-
+  const handleLogoTap = () => {
+    const next = tapCount + 1
+    setTapCount(next)
     if (next >= 5) {
-      setTaps(0)
-      setFlash(true)
-      setTimeout(() => setFlash(false), 400)
-
-      // Check if owner is set up
-      const res  = await fetch('/api/auth/setup')
-      const json = await res.json()
-      router.push(json.ownerExists ? '/auth/login' : '/auth/setup')
+      setTapCount(0)
+      router.push('/auth/login')
     }
-  }, [taps, router])
+    setTimeout(() => setTapCount(0), 2000)
+  }
 
   return (
-    <footer className="border-t border-white/5 bg-brand-asphalt/80 backdrop-blur-sm">
-      <div className="container-section py-12">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="relative overflow-hidden pt-20 pb-8">
 
-          {/* Logo — 5-tap secret */}
-          <button
-            onClick={handleLogoTap}
-            className={`flex items-center gap-2 transition-all select-none outline-none ${flash ? 'opacity-50 scale-95' : 'opacity-100'}`}
-            aria-label="Big V's Best Routes"
-          >
-            <div className="w-8 h-8 rounded-xl bg-gradient-cyan-blue flex items-center justify-center">
-              <Zap className="w-4 h-4 text-brand-asphalt" />
+      {/* Background */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(5,5,7,0.8) 30%, #050507 100%)' }} />
+      <div className="absolute top-0 inset-x-0 h-px"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)' }} />
+
+      <div className="container-section relative z-10">
+
+        {/* Top section */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 mb-16">
+
+          {/* Brand column */}
+          <div className="lg:col-span-2">
+            <button onClick={handleLogoTap} className="group flex items-center gap-3 mb-6">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #B8860B 0%, #D4AF37 40%, #F5D76E 100%)' }}>
+                  <Zap className="w-5 h-5 text-[#050507]" strokeWidth={2.5} />
+                </div>
+                <div className="absolute inset-0 rounded-xl blur-md opacity-40 group-hover:opacity-70 transition-opacity"
+                  style={{ background: '#D4AF37' }} />
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="font-black text-base tracking-tight gradient-text-gold">BIG V'S</span>
+                <span className="font-black text-base tracking-tight gradient-text-silver" style={{ marginTop: '-1px' }}>BEST ROUTES</span>
+              </div>
+            </button>
+
+            <p className="text-sm leading-relaxed mb-6 max-w-xs" style={{ color: '#6A6A7A' }}>
+              Enterprise AI-powered route optimisation and fleet management platform. Built for serious logistics operations.
+            </p>
+
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5 text-sm" style={{ color: '#6A6A7A' }}>
+                <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: '#D4AF37', opacity: 0.7 }} />
+                United Kingdom
+              </div>
+              <div className="flex items-center gap-2.5 text-sm" style={{ color: '#6A6A7A' }}>
+                <Mail className="w-4 h-4 flex-shrink-0" style={{ color: '#D4AF37', opacity: 0.7 }} />
+                enterprise@bigvsbestroutes.com
+              </div>
             </div>
-            <span className="text-brand-text font-bold text-sm">Big V's Best Routes</span>
-          </button>
+          </div>
 
-          {/* Nav links */}
-          <nav className="flex items-center gap-6 text-sm text-brand-muted">
-            <a href="/features"  className="hover:text-brand-text transition-colors">Features</a>
-            <a href="/use-cases" className="hover:text-brand-text transition-colors">Use Cases</a>
-            <a href="/demo"      className="hover:text-brand-text transition-colors">Live Demo</a>
-            <a href="/contact"   className="hover:text-brand-text transition-colors">Contact</a>
-          </nav>
+          {/* Nav columns */}
+          {Object.entries(LINKS).map(([section, links]) => (
+            <div key={section} className="lg:col-span-1">
+              <h4 className="font-bold text-xs uppercase tracking-widest mb-5" style={{ color: '#D4AF37' }}>
+                {section}
+              </h4>
+              <ul className="space-y-3">
+                {links.map(({ label, href }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: '#6A6A7A' }}
+                      onMouseEnter={e => { (e.target as HTMLElement).style.color = '#D4AF37' }}
+                      onMouseLeave={e => { (e.target as HTMLElement).style.color = '#6A6A7A' }}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
 
-          {/* Copyright */}
-          <p className="text-brand-muted text-xs">
-            © {new Date().getFullYear()} Big V's Best Routes. All rights reserved.
-          </p>
+          {/* CTA column */}
+          <div className="lg:col-span-2">
+            <h4 className="font-bold text-xs uppercase tracking-widest mb-5" style={{ color: '#D4AF37' }}>
+              Get Started
+            </h4>
+            <div
+              className="p-5 rounded-2xl"
+              style={{
+                background: 'linear-gradient(145deg, rgba(22,22,34,0.9), rgba(14,14,22,0.95))',
+                border: '1px solid rgba(212,175,55,0.15)',
+              }}
+            >
+              <p className="text-sm mb-4" style={{ color: '#8A8A9A' }}>
+                Ready to optimise your fleet? Get a custom AI-scoped quote in minutes.
+              </p>
+              <Link href="/onboarding" className="btn-primary text-sm w-full justify-center">
+                <Zap className="w-4 h-4" /> Start AI Onboarding
+              </Link>
+              <Link href="/demo" className="btn-secondary text-sm w-full justify-center mt-2.5">
+                View Live Demo
+              </Link>
+            </div>
+          </div>
         </div>
 
-        {/* Tap counter hint (invisible until you start tapping) */}
-        {taps > 0 && taps < 5 && (
-          <p className="text-center text-brand-muted/30 text-xs mt-4 select-none">
-            {5 - taps} more…
+        {/* Gold divider */}
+        <div className="gold-line mb-8" />
+
+        {/* Bottom bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs" style={{ color: '#4A4A6A' }}>
+            © {new Date().getFullYear()} Big V's Best Routes. All rights reserved.
           </p>
-        )}
+          <div className="flex items-center gap-2">
+            <div className="status-live" />
+            <span className="text-xs" style={{ color: '#4A4A6A' }}>All systems operational</span>
+          </div>
+          <p className="text-xs" style={{ color: '#4A4A6A' }}>
+            Enterprise AI Logistics Platform
+          </p>
+        </div>
       </div>
     </footer>
   )
