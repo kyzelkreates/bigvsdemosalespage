@@ -4,49 +4,10 @@
 // ══════════════════════════════════════════════════════════════
 
 import { smsLogs } from '@/lib/db'
+import { getPlatformConfig } from '@/lib/platform-config'
 import type { Lead } from '@/lib/db'
 
 const TEXTBEE_API_URL = 'https://api.textbee.dev/api/v1'
-
-// ── CONFIG RESOLVER ──────────────────────────────────────────────
-// Reads saved admin config from KV, falls back to env vars
-
-async function getTextBeeConfig(): Promise<{
-  apiKey: string
-  deviceId: string
-  adminPhone: string
-}> {
-  try {
-    const KV_URL   = process.env.KV_REST_API_URL
-    const KV_TOKEN = process.env.KV_REST_API_TOKEN
-
-    if (KV_URL && KV_TOKEN) {
-      const res  = await fetch(`${KV_URL}/get/${encodeURIComponent('bvr:platform_config')}`, {
-        headers: { Authorization: `Bearer ${KV_TOKEN}` },
-        cache: 'no-store',
-      })
-      const json = await res.json()
-      if (json.result) {
-        const saved = JSON.parse(json.result)
-        if (saved.textbeeApiKey && saved.textbeeDeviceId) {
-          return {
-            apiKey:     saved.textbeeApiKey,
-            deviceId:   saved.textbeeDeviceId,
-            adminPhone: saved.adminPhone ?? process.env.ADMIN_PHONE_NUMBER ?? '',
-          }
-        }
-      }
-    }
-  } catch {
-    // fall through to env
-  }
-
-  return {
-    apiKey:     process.env.TEXTBEE_API_KEY    ?? '',
-    deviceId:   process.env.TEXTBEE_DEVICE_ID  ?? '',
-    adminPhone: process.env.ADMIN_PHONE_NUMBER ?? '',
-  }
-}
 
 // ── CORE SENDER ─────────────────────────────────────────────────
 
@@ -57,20 +18,20 @@ export interface SmsPayload {
 }
 
 export async function sendSmsWithConfig({ recipient, message, leadId }: SmsPayload) {
-  const config = await getTextBeeConfig()
+  const config = await getPlatformConfig()
 
   const to = recipient || config.adminPhone
 
   const log = await smsLogs.create({
     leadId,
-    recipient: to,
+    recipient: to || 'unset',
     message,
-    status:    'pending',
-    provider:  'textbee',
+    status:   'pending',
+    provider: 'textbee',
   })
 
-  if (!config.apiKey || !config.deviceId || !to) {
-    const err = !config.apiKey || !config.deviceId
+  if (!config.textbeeApiKey || !config.textbeeDeviceId || !to) {
+    const err = !config.textbeeApiKey || !config.textbeeDeviceId
       ? 'TextBee not configured. Visit Admin → SMS to set up.'
       : 'No recipient phone number configured.'
     await smsLogs.update(log.id, { status: 'failed', errorMessage: err })
@@ -79,14 +40,17 @@ export async function sendSmsWithConfig({ recipient, message, leadId }: SmsPaylo
   }
 
   try {
-    const res  = await fetch(`${TEXTBEE_API_URL}/gateway/devices/${config.deviceId}/sendMessage`, {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key':    config.apiKey,
-      },
-      body: JSON.stringify({ receivers: [to], message }),
-    })
+    const res = await fetch(
+      `${TEXTBEE_API_URL}/gateway/devices/${config.textbeeDeviceId}/sendMessage`,
+      {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key':    config.textbeeApiKey,
+        },
+        body: JSON.stringify({ receivers: [to], message }),
+      }
+    )
 
     const data = await res.json()
     if (!res.ok) throw new Error(data?.message ?? `TextBee error ${res.status}`)
@@ -117,10 +81,10 @@ export async function sendLeadNotification(lead: Lead, quoteMin?: number, quoteM
     `👤 ${lead.name}`,
     `🏢 ${lead.company}`,
     `📧 ${lead.email}`,
-    lead.phone ? `📞 ${lead.phone}` : null,
+    lead.phone   ? `📞 ${lead.phone}`         : null,
     `🚛 Fleet: ${lead.fleetSize} · ${lead.industry}`,
     lead.driverCount ? `👥 Drivers: ${lead.driverCount}` : null,
-    lead.country    ? `🌍 Region: ${lead.country}` : null,
+    lead.country ? `🌍 Region: ${lead.country}` : null,
     `⚡ Fit Score: ${lead.fitScore}/100`,
     quoteMin && quoteMax
       ? `💰 Quote: £${quoteMin.toLocaleString()}–£${quoteMax.toLocaleString()}`
@@ -143,7 +107,8 @@ export async function sendQuoteNotification(lead: Lead, valuation: {
   roiCostReduction: number
   confidenceScore: number
 }) {
-  const totalRoi = valuation.roiFuelSavings + valuation.roiTimeSavings + valuation.roiCostReduction
+  const totalRoi =
+    valuation.roiFuelSavings + valuation.roiTimeSavings + valuation.roiCostReduction
 
   const lines = [
     `📊 AI QUOTE GENERATED — Big V's Best Routes`,
@@ -163,7 +128,8 @@ export async function sendQuoteNotification(lead: Lead, valuation: {
     `   Total ROI:       £${totalRoi.toLocaleString()}/yr`,
     ``,
     `📋 SCOPE`,
-    valuation.scopeDescription.slice(0, 250) + (valuation.scopeDescription.length > 250 ? '…' : ''),
+    valuation.scopeDescription.slice(0, 250) +
+      (valuation.scopeDescription.length > 250 ? '…' : ''),
     ``,
     `🕐 ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' })}`,
   ].join('\n')
