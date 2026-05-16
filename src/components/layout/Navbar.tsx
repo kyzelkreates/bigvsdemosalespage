@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Zap, Lock } from 'lucide-react'
+import { Menu, X, Zap, Lock, Loader2 } from 'lucide-react'
 
 const NAV_LINKS = [
   { href: '/',          label: 'Home'      },
@@ -15,16 +15,41 @@ const NAV_LINKS = [
   { href: '/contact',   label: 'Contact'   },
 ]
 
+// Checks setup status then routes owner to correct portal
+function useAdminEntry() {
+  const router = useRouter()
+  const [checking, setChecking] = useState(false)
+
+  const enter = useCallback(async () => {
+    setChecking(true)
+    try {
+      const res  = await fetch('/api/auth/setup')
+      const data = await res.json()
+      router.push(data.ownerExists ? '/auth/login' : '/auth/setup')
+    } catch {
+      router.push('/auth/login')
+    } finally {
+      setChecking(false)
+    }
+  }, [router])
+
+  return { enter, checking }
+}
+
 export function Navbar() {
-  const [scrolled,    setScrolled]    = useState(false)
-  const [mobileOpen,  setMobileOpen]  = useState(false)
+  const [scrolled,   setScrolled]   = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
+  const { enter, checking } = useAdminEntry()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Close mobile menu on route change
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   return (
     <>
@@ -60,13 +85,15 @@ export function Navbar() {
             {/* Desktop nav */}
             <div className="hidden lg:flex items-center gap-1">
               {NAV_LINKS.map(({ href, label }) => {
-                const active = pathname === href
+                const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
                 return (
                   <Link
                     key={href}
                     href={href}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      active ? 'text-[#D4AF37]' : 'text-[#8A8A9A] hover:text-[#F0EDE8]'
+                      active
+                        ? 'text-[#D4AF37] bg-[rgba(212,175,55,0.08)]'
+                        : 'text-[#8A8A9A] hover:text-[#F0EDE8]'
                     }`}
                   >
                     {label}
@@ -84,35 +111,43 @@ export function Navbar() {
                 <Zap className="w-3.5 h-3.5" />
                 Live Demo
               </Link>
-              {/* ── Admin Button ─────────────────────────────── */}
-              <Link
-                href="/admin/dashboard"
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold tracking-widest uppercase transition-all duration-200"
+
+              {/* ── Admin Portal Button ── */}
+              <button
+                onClick={enter}
+                disabled={checking}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold tracking-widest uppercase transition-all duration-200 disabled:opacity-60"
                 style={{
                   background: 'rgba(212,175,55,0.08)',
-                  border: '1px solid rgba(212,175,55,0.25)',
+                  border: '1px solid rgba(212,175,55,0.28)',
                   color: '#D4AF37',
                   letterSpacing: '0.08em',
+                  cursor: checking ? 'wait' : 'pointer',
                 }}
                 onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'rgba(212,175,55,0.14)'
-                  el.style.boxShadow = '0 0 16px rgba(212,175,55,0.2)'
+                  if (!checking) {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.background = 'rgba(212,175,55,0.16)'
+                    el.style.boxShadow  = '0 0 18px rgba(212,175,55,0.22)'
+                  }
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
                   el.style.background = 'rgba(212,175,55,0.08)'
-                  el.style.boxShadow = 'none'
+                  el.style.boxShadow  = 'none'
                 }}
               >
-                <Lock className="w-3 h-3" />
-                Admin
-              </Link>
+                {checking
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Lock className="w-3 h-3" />
+                }
+                {checking ? 'Checking…' : 'Admin'}
+              </button>
             </div>
 
             {/* Mobile toggle */}
             <button
-              onClick={() => setMobileOpen(!mobileOpen)}
+              onClick={() => setMobileOpen(o => !o)}
               className="lg:hidden p-2 rounded-lg text-[#8A8A9A] hover:text-[#D4AF37] transition-colors"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -120,60 +155,68 @@ export function Navbar() {
           </div>
         </div>
 
-        {scrolled && <div className="gold-line" />}
+        {scrolled && (
+          <div className="absolute bottom-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)' }} />
+        )}
       </motion.nav>
 
       {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-16 inset-x-0 z-40 mx-4 mt-2 rounded-2xl p-4 space-y-1"
+            className="fixed top-[68px] inset-x-0 z-40 mx-4 rounded-2xl p-4 space-y-1"
             style={{
-              background: 'rgba(13,13,20,0.97)',
+              background: 'rgba(10,10,16,0.97)',
               backdropFilter: 'blur(24px)',
               border: '1px solid rgba(212,175,55,0.15)',
               boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
             }}
           >
-            {NAV_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileOpen(false)}
-                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  pathname === href
-                    ? 'text-[#D4AF37] bg-[rgba(212,175,55,0.06)]'
-                    : 'text-[#8A8A9A] hover:text-[#F0EDE8]'
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-            <div className="pt-2" style={{ borderTop: '1px solid rgba(212,175,55,0.1)' }}>
-              {/* Admin button in mobile */}
-              <Link
-                href="/admin/dashboard"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-bold tracking-widest uppercase mt-1 mb-2 transition-all"
+            {NAV_LINKS.map(({ href, label }) => {
+              const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    active
+                      ? 'text-[#D4AF37] bg-[rgba(212,175,55,0.08)]'
+                      : 'text-[#8A8A9A] hover:text-[#F0EDE8]'
+                  }`}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+
+            <div className="pt-3 space-y-2" style={{ borderTop: '1px solid rgba(212,175,55,0.1)' }}>
+              {/* Mobile Admin button */}
+              <button
+                onClick={() => { setMobileOpen(false); enter() }}
+                disabled={checking}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all disabled:opacity-60"
                 style={{
                   background: 'rgba(212,175,55,0.08)',
-                  border: '1px solid rgba(212,175,55,0.2)',
+                  border: '1px solid rgba(212,175,55,0.22)',
                   color: '#D4AF37',
+                  cursor: checking ? 'wait' : 'pointer',
                 }}
               >
-                <Lock className="w-3.5 h-3.5" />
-                Admin Portal
+                {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                {checking ? 'Checking…' : 'Admin Portal'}
+              </button>
+
+              <Link href="/onboarding" className="btn-secondary text-sm text-center block">
+                Get Quote
               </Link>
-              <div className="flex flex-col gap-2">
-                <Link href="/onboarding" className="btn-secondary text-sm text-center" onClick={() => setMobileOpen(false)}>Get Quote</Link>
-                <Link href="/demo" className="btn-primary text-sm justify-center" onClick={() => setMobileOpen(false)}>
-                  <Zap className="w-3.5 h-3.5" /> Launch Demo
-                </Link>
-              </div>
+              <Link href="/demo" className="btn-primary text-sm justify-center flex">
+                <Zap className="w-3.5 h-3.5" /> Launch Demo
+              </Link>
             </div>
           </motion.div>
         )}

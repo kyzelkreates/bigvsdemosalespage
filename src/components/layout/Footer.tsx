@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, MapPin, Mail, Lock } from 'lucide-react'
+import { Zap, MapPin, Mail, Lock, Loader2 } from 'lucide-react'
 
 const LINKS = {
   Platform: [
@@ -19,15 +19,37 @@ const LINKS = {
   ],
 }
 
+// Smart routing: setup wizard if no owner yet, login if owner exists
+function useAdminEntry() {
+  const router = useRouter()
+  const [checking, setChecking] = useState(false)
+
+  const enter = useCallback(async () => {
+    if (checking) return
+    setChecking(true)
+    try {
+      const res  = await fetch('/api/auth/setup')
+      const data = await res.json()
+      router.push(data.ownerExists ? '/auth/login' : '/auth/setup')
+    } catch {
+      router.push('/auth/login')
+    } finally {
+      setChecking(false)
+    }
+  }, [router, checking])
+
+  return { enter, checking }
+}
+
 export function Footer() {
   const [tapCount, setTapCount] = useState(0)
-  const router = useRouter()
+  const { enter, checking } = useAdminEntry()
 
   const handleLogoTap = () => {
     const next = tapCount + 1
     setTapCount(next)
-    if (next >= 5) { setTapCount(0); router.push('/auth/login') }
-    setTimeout(() => setTapCount(0), 2000)
+    if (next >= 5) { setTapCount(0); enter() }
+    setTimeout(() => setTapCount(prev => prev > 0 ? 0 : prev), 2500)
   }
 
   return (
@@ -44,6 +66,7 @@ export function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-2">
+            {/* Logo — tap 5× for admin entry */}
             <button onClick={handleLogoTap} className="group flex items-center gap-3 mb-6">
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -63,7 +86,7 @@ export function Footer() {
               The only fleet navigation platform built with driver safety and legal compliance as its primary architectural foundation. 5 years. 16,000+ hours. No shortcuts.
             </p>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 mb-6">
               <div className="flex items-center gap-2.5 text-sm" style={{ color: '#6A6A7A' }}>
                 <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: '#D4AF37', opacity: 0.7 }} />
                 United Kingdom
@@ -73,6 +96,35 @@ export function Footer() {
                 enterprise@bigvsbestroutes.com
               </div>
             </div>
+
+            {/* Visible admin access button */}
+            <button
+              onClick={enter}
+              disabled={checking}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold tracking-widest uppercase transition-all disabled:opacity-50"
+              style={{
+                background: 'rgba(212,175,55,0.07)',
+                border: '1px solid rgba(212,175,55,0.2)',
+                color: '#D4AF37',
+                cursor: checking ? 'wait' : 'pointer',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'rgba(212,175,55,0.14)'
+                el.style.boxShadow  = '0 0 16px rgba(212,175,55,0.18)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'rgba(212,175,55,0.07)'
+                el.style.boxShadow  = 'none'
+              }}
+            >
+              {checking
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Lock className="w-3 h-3" />
+              }
+              {checking ? 'Checking…' : 'Admin Portal'}
+            </button>
           </div>
 
           {/* Nav columns */}
@@ -84,7 +136,8 @@ export function Footer() {
               <ul className="space-y-3">
                 {links.map(({ label, href }) => (
                   <li key={href}>
-                    <Link href={href} className="text-sm transition-colors duration-200 hover:text-[#D4AF37]"
+                    <Link href={href}
+                      className="text-sm transition-colors duration-200 hover:text-[#D4AF37]"
                       style={{ color: '#6A6A7A' }}>
                       {label}
                     </Link>
@@ -100,7 +153,10 @@ export function Footer() {
               Get Started
             </h4>
             <div className="p-5 rounded-2xl"
-              style={{ background: 'linear-gradient(145deg, rgba(22,22,34,0.9), rgba(14,14,22,0.95))', border: '1px solid rgba(212,175,55,0.15)' }}>
+              style={{
+                background: 'linear-gradient(145deg, rgba(22,22,34,0.9), rgba(14,14,22,0.95))',
+                border: '1px solid rgba(212,175,55,0.15)',
+              }}>
               <p className="text-sm mb-4" style={{ color: '#8A8A9A' }}>
                 Ready to make your fleet legally compliant and safety-first? Get a custom scoped quote.
               </p>
@@ -114,27 +170,19 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Divider */}
         <div className="gold-line mb-8" />
 
+        {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs" style={{ color: '#4A4A6A' }}>
             © {new Date().getFullYear()} Big V's Best Routes. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="status-live" />
               <span className="text-xs" style={{ color: '#4A4A6A' }}>All systems operational</span>
             </div>
-            {/* Subtle admin link */}
-            <Link href="/admin/dashboard"
-              className="flex items-center gap-1 text-xs transition-colors"
-              style={{ color: '#2A2A3A' }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = '#D4AF37' }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = '#2A2A3A' }}
-            >
-              <Lock className="w-3 h-3" />
-              Admin
-            </Link>
           </div>
           <p className="text-xs" style={{ color: '#4A4A6A' }}>
             Safety-First Fleet Navigation Platform
