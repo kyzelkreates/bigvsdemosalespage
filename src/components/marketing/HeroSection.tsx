@@ -2,12 +2,12 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { ChevronRight, Truck, Zap, Activity, MapPin, Shield, BarChart3 } from 'lucide-react'
+import { ChevronRight, Truck, Zap, Activity, Shield, Scale, Clock } from 'lucide-react'
 
 const FLOATING_STATS = [
-  { value: '94%',    label: 'Route Efficiency',  icon: Activity },
-  { value: '£180K+', label: 'Annual Savings',     icon: BarChart3 },
-  { value: '40%',    label: 'Fuel Reduction',     icon: Truck },
+  { value: '5 Years',  label: 'In Development',        icon: Clock  },
+  { value: '16,000+',  label: 'Engineering Hours',      icon: Activity },
+  { value: 'UK & EU',  label: 'Legal Compliance',       icon: Scale  },
 ]
 
 export function HeroSection() {
@@ -16,35 +16,23 @@ export function HeroSection() {
 
       {/* Deep space background */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Primary gold nebula */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] opacity-30"
           style={{ background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.15) 0%, rgba(184,134,11,0.06) 40%, transparent 70%)', filter: 'blur(60px)' }} />
-        {/* Secondary silver highlight */}
         <div className="absolute top-1/4 right-0 w-[500px] h-[500px] opacity-20"
           style={{ background: 'radial-gradient(ellipse at center, rgba(192,192,192,0.12) 0%, transparent 70%)', filter: 'blur(80px)' }} />
-        {/* Bottom deep shadow */}
-        <div className="absolute bottom-0 inset-x-0 h-48 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, #050507, transparent)' }} />
-
-        {/* Animated grid */}
         <div className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: 'linear-gradient(rgba(212,175,55,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.5) 1px, transparent 1px)', backgroundSize: '80px 80px' }} />
-
         {/* Corner accents */}
-        <div className="absolute top-24 left-8 w-px h-32 opacity-30"
-          style={{ background: 'linear-gradient(180deg, rgba(212,175,55,0.8), transparent)' }} />
-        <div className="absolute top-24 left-8 w-32 h-px opacity-30"
-          style={{ background: 'linear-gradient(90deg, rgba(212,175,55,0.8), transparent)' }} />
-        <div className="absolute top-24 right-8 w-px h-32 opacity-30"
-          style={{ background: 'linear-gradient(180deg, rgba(212,175,55,0.8), transparent)' }} />
-        <div className="absolute top-24 right-8 w-32 h-px opacity-30"
-          style={{ background: 'linear-gradient(270deg, rgba(212,175,55,0.8), transparent)' }} />
+        <div className="absolute top-24 left-8 w-px h-32 opacity-30" style={{ background: 'linear-gradient(180deg, rgba(212,175,55,0.8), transparent)' }} />
+        <div className="absolute top-24 left-8 w-32 h-px opacity-30" style={{ background: 'linear-gradient(90deg, rgba(212,175,55,0.8), transparent)' }} />
+        <div className="absolute top-24 right-8 w-px h-32 opacity-30" style={{ background: 'linear-gradient(180deg, rgba(212,175,55,0.8), transparent)' }} />
+        <div className="absolute top-24 right-8 w-32 h-px opacity-30" style={{ background: 'linear-gradient(270deg, rgba(212,175,55,0.8), transparent)' }} />
       </div>
 
       <div className="container-section relative z-10 py-24">
         <div className="max-w-5xl mx-auto text-center">
 
-          {/* Overline badge */}
+          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -58,26 +46,23 @@ export function HeroSection() {
           >
             <span className="status-live" />
             <span className="text-sm font-semibold tracking-wide" style={{ color: '#D4AF37' }}>
-              Enterprise AI Logistics Platform — Production Grade
+              Safety-First Fleet Navigation — Built for Legal Compliance
             </span>
           </motion.div>
 
-          {/* Main headline */}
+          {/* Headline */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
           >
             <h1 className="font-black leading-[1.02] tracking-[-0.04em] mb-6">
-              <span className="block text-5xl sm:text-6xl lg:text-8xl text-[#F0EDE8]">Route</span>
-              <span
-                className="block text-5xl sm:text-6xl lg:text-8xl shimmer-gold"
-                style={{ backgroundSize: '300% 100%' }}
-              >
-                Intelligence.
+              <span className="block text-5xl sm:text-6xl lg:text-8xl text-[#F0EDE8]">Fleet Safety.</span>
+              <span className="block text-5xl sm:text-6xl lg:text-8xl shimmer-gold" style={{ backgroundSize: '300% 100%' }}>
+                Legally Built.
               </span>
               <span className="block text-5xl sm:text-6xl lg:text-8xl mt-1" style={{ color: '#C0C0C0' }}>
-                Delivered.
+                Finally Done Right.
               </span>
             </h1>
           </motion.div>
@@ -90,12 +75,12 @@ export function HeroSection() {
             className="text-lg sm:text-xl max-w-3xl mx-auto mb-12 leading-relaxed"
             style={{ color: '#8A8A9A' }}
           >
-            Big V's Best Routes combines real-time route optimisation, fleet intelligence,
-            driver coordination, and AI-powered dispatch into a single enterprise control system.
-            Purpose-built for serious logistics operations.
+            Big V's Best Routes is the only fleet navigation platform built from the ground up with
+            driver safety and legal compliance as the primary architectural foundation — not as an afterthought.
+            5 years. 16,000+ engineering hours. No shortcuts.
           </motion.p>
 
-          {/* CTA row */}
+          {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -152,11 +137,11 @@ export function HeroSection() {
             className="flex flex-wrap justify-center gap-6"
           >
             {[
-              { icon: Truck,    label: 'Fleet Tracking'      },
-              { icon: MapPin,   label: 'Route Optimisation'  },
-              { icon: Activity, label: 'Real-time Analytics' },
-              { icon: Zap,      label: 'AI Dispatch Engine'  },
-              { icon: Shield,   label: 'Enterprise RBAC'     },
+              { icon: Truck,    label: 'Fleet Navigation'     },
+              { icon: Scale,    label: 'Legal Compliance'     },
+              { icon: Shield,   label: 'Driver Safety First'  },
+              { icon: Activity, label: 'Real-time Intelligence' },
+              { icon: Zap,      label: 'AI Dispatch Engine'   },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-2 text-sm" style={{ color: '#4A4A6A' }}>
                 <Icon className="w-4 h-4" style={{ color: '#D4AF37', opacity: 0.7 }} />
@@ -167,7 +152,6 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* Bottom fade */}
       <div className="absolute bottom-0 inset-x-0 h-32 pointer-events-none"
         style={{ background: 'linear-gradient(to top, #050507, transparent)' }} />
     </section>

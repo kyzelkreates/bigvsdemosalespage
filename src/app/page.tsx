@@ -1,20 +1,21 @@
 // ══════════════════════════════════════════════════════════════
-// HOME PAGE — SEO LANDING PAGE
+// HOME PAGE
 // ══════════════════════════════════════════════════════════════
 
 import type { Metadata } from 'next'
-import { Navbar }       from '@/components/layout/Navbar'
-import { HeroSection }  from '@/components/marketing/HeroSection'
-import { StatsBar }     from '@/components/marketing/StatsBar'
-import { FeaturesGrid } from '@/components/marketing/FeaturesGrid'
+import { Navbar }          from '@/components/layout/Navbar'
+import { HeroSection }     from '@/components/marketing/HeroSection'
+import { StatsBar }        from '@/components/marketing/StatsBar'
+import { FeaturesGrid }    from '@/components/marketing/FeaturesGrid'
+import { AboutSnippet }    from '@/components/marketing/AboutSnippet'
 import { UseCasesSection } from '@/components/marketing/UseCasesSection'
-import { DemoPreview }  from '@/components/marketing/DemoPreview'
-import { LeadCaptureCTA } from '@/components/marketing/LeadCaptureCTA'
-import { Footer }       from '@/components/layout/Footer'
+import { DemoPreview }     from '@/components/marketing/DemoPreview'
+import { LeadCaptureCTA }  from '@/components/marketing/LeadCaptureCTA'
+import { Footer }          from '@/components/layout/Footer'
 
 export const metadata: Metadata = {
-  title: "AI Route Optimisation & Fleet Management System",
-  description: "Big V's Best Routes delivers enterprise AI-powered route optimisation, real-time fleet management, and intelligent dispatch. Built for serious logistics operations.",
+  title: "AI Fleet Navigation & Legal Compliance Platform",
+  description: "Big V's Best Routes — the only fleet navigation platform built with driver safety and legal compliance as the primary architectural foundation. 5 years. 16,000+ hours. No shortcuts.",
   alternates: { canonical: 'https://bigvsbestroutes.com' },
 }
 
@@ -22,25 +23,13 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <Navbar />
-
-      {/* Hero */}
       <HeroSection />
-
-      {/* Social proof metrics */}
       <StatsBar />
-
-      {/* Feature grid */}
       <FeaturesGrid />
-
-      {/* Use Cases */}
+      <AboutSnippet />
       <UseCasesSection />
-
-      {/* Live demo preview */}
       <DemoPreview />
-
-      {/* Lead capture CTA */}
       <LeadCaptureCTA />
-
       <Footer />
     </main>
   )

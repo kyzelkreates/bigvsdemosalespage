@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, MapPin, Mail } from 'lucide-react'
+import { Zap, MapPin, Mail, Lock } from 'lucide-react'
 
 const LINKS = {
   Platform: [
@@ -13,6 +13,7 @@ const LINKS = {
     { label: 'Install App', href: '/install'    },
   ],
   Company: [
+    { label: 'Our Story',   href: '/about'      },
     { label: 'Contact Us',  href: '/contact'    },
     { label: 'Get a Quote', href: '/onboarding' },
   ],
@@ -25,17 +26,13 @@ export function Footer() {
   const handleLogoTap = () => {
     const next = tapCount + 1
     setTapCount(next)
-    if (next >= 5) {
-      setTapCount(0)
-      router.push('/auth/login')
-    }
+    if (next >= 5) { setTapCount(0); router.push('/auth/login') }
     setTimeout(() => setTapCount(0), 2000)
   }
 
   return (
     <footer className="relative overflow-hidden pt-20 pb-8">
 
-      {/* Background */}
       <div className="absolute inset-0 pointer-events-none"
         style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(5,5,7,0.8) 30%, #050507 100%)' }} />
       <div className="absolute top-0 inset-x-0 h-px"
@@ -43,10 +40,9 @@ export function Footer() {
 
       <div className="container-section relative z-10">
 
-        {/* Top section */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 mb-16">
 
-          {/* Brand column */}
+          {/* Brand */}
           <div className="lg:col-span-2">
             <button onClick={handleLogoTap} className="group flex items-center gap-3 mb-6">
               <div className="relative">
@@ -64,7 +60,7 @@ export function Footer() {
             </button>
 
             <p className="text-sm leading-relaxed mb-6 max-w-xs" style={{ color: '#6A6A7A' }}>
-              Enterprise AI-powered route optimisation and fleet management platform. Built for serious logistics operations.
+              The only fleet navigation platform built with driver safety and legal compliance as its primary architectural foundation. 5 years. 16,000+ hours. No shortcuts.
             </p>
 
             <div className="space-y-2.5">
@@ -88,13 +84,8 @@ export function Footer() {
               <ul className="space-y-3">
                 {links.map(({ label, href }) => (
                   <li key={href}>
-                    <Link
-                      href={href}
-                      className="text-sm transition-colors duration-200"
-                      style={{ color: '#6A6A7A' }}
-                      onMouseEnter={e => { (e.target as HTMLElement).style.color = '#D4AF37' }}
-                      onMouseLeave={e => { (e.target as HTMLElement).style.color = '#6A6A7A' }}
-                    >
+                    <Link href={href} className="text-sm transition-colors duration-200 hover:text-[#D4AF37]"
+                      style={{ color: '#6A6A7A' }}>
                       {label}
                     </Link>
                   </li>
@@ -103,20 +94,15 @@ export function Footer() {
             </div>
           ))}
 
-          {/* CTA column */}
+          {/* CTA card */}
           <div className="lg:col-span-2">
             <h4 className="font-bold text-xs uppercase tracking-widest mb-5" style={{ color: '#D4AF37' }}>
               Get Started
             </h4>
-            <div
-              className="p-5 rounded-2xl"
-              style={{
-                background: 'linear-gradient(145deg, rgba(22,22,34,0.9), rgba(14,14,22,0.95))',
-                border: '1px solid rgba(212,175,55,0.15)',
-              }}
-            >
+            <div className="p-5 rounded-2xl"
+              style={{ background: 'linear-gradient(145deg, rgba(22,22,34,0.9), rgba(14,14,22,0.95))', border: '1px solid rgba(212,175,55,0.15)' }}>
               <p className="text-sm mb-4" style={{ color: '#8A8A9A' }}>
-                Ready to optimise your fleet? Get a custom AI-scoped quote in minutes.
+                Ready to make your fleet legally compliant and safety-first? Get a custom scoped quote.
               </p>
               <Link href="/onboarding" className="btn-primary text-sm w-full justify-center">
                 <Zap className="w-4 h-4" /> Start AI Onboarding
@@ -128,20 +114,30 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Gold divider */}
         <div className="gold-line mb-8" />
 
-        {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs" style={{ color: '#4A4A6A' }}>
             © {new Date().getFullYear()} Big V's Best Routes. All rights reserved.
           </p>
-          <div className="flex items-center gap-2">
-            <div className="status-live" />
-            <span className="text-xs" style={{ color: '#4A4A6A' }}>All systems operational</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="status-live" />
+              <span className="text-xs" style={{ color: '#4A4A6A' }}>All systems operational</span>
+            </div>
+            {/* Subtle admin link */}
+            <Link href="/admin/dashboard"
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: '#2A2A3A' }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.color = '#D4AF37' }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.color = '#2A2A3A' }}
+            >
+              <Lock className="w-3 h-3" />
+              Admin
+            </Link>
           </div>
           <p className="text-xs" style={{ color: '#4A4A6A' }}>
-            Enterprise AI Logistics Platform
+            Safety-First Fleet Navigation Platform
           </p>
         </div>
       </div>
