@@ -7,17 +7,40 @@ const SetupSchema = z.object({
   password: z.string().min(12, 'Password must be at least 12 characters'),
 })
 
+// ── GET: Check whether owner account already exists ─────────────
+// Called by navbar/footer admin button to decide which portal to show.
+// Returns { ownerExists: true } → go to /auth/login
+// Returns { ownerExists: false } → go to /auth/setup (first-time wizard)
 export async function GET() {
-  const ownerExists = await hasOwner()
-  return NextResponse.json({ ownerExists })
+  try {
+    const ownerExists = await hasOwner()
+    return NextResponse.json(
+      { ownerExists: ownerExists === true },
+      {
+        headers: {
+          // Never cache this — must always be fresh
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      }
+    )
+  } catch (err) {
+    console.error('[/api/auth/setup GET]', err)
+    // On error, default to login (safer — don't expose setup wizard if KV is down)
+    return NextResponse.json(
+      { ownerExists: true },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
+  }
 }
 
+// ── POST: Create the owner account (one-time only) ──────────────
 export async function POST(req: NextRequest) {
   try {
     const ownerExists = await hasOwner()
     if (ownerExists) {
       return NextResponse.json(
-        { success: false, error: 'Owner account already exists. Setup is locked.' },
+        { success: false, error: 'Owner account already exists. Setup is permanently locked.' },
         { status: 403 }
       )
     }

@@ -1,7 +1,6 @@
 // ══════════════════════════════════════════════════════════════
-// BIG V'S BEST ROUTES — LIGHTWEIGHT KV STORE
-// No Supabase. No external DB. Vercel KV (Redis) backed.
-// Falls back to in-memory store for local dev.
+// BIG V'S BEST ROUTES — KV STORE
+// Uses @vercel/kv in production, in-memory Map in local dev.
 // ══════════════════════════════════════════════════════════════
 
 import { nanoid } from 'nanoid'
@@ -70,52 +69,60 @@ export interface PwaInstall {
 }
 
 // ── KV ADAPTER ─────────────────────────────────────────────────
-// Uses Vercel KV in production, in-memory Map in dev
+// @vercel/kv in production · in-memory Map in local dev
 
-let _kv: Map<string, string> | null = null
+let _mem: Map<string, string> | null = null
+
+function mem(): Map<string, string> {
+  if (!_mem) _mem = new Map()
+  return _mem
+}
+
+function isVercelKv(): boolean {
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+}
 
 async function kvGet(key: string): Promise<string | null> {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    const res = await fetch(`${process.env.KV_REST_API_URL}/get/${encodeURIComponent(key)}`, {
-      headers: { Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}` },
-      cache: 'no-store',
-    })
-    const json = await res.json()
-    return json.result ?? null
+  if (isVercelKv()) {
+    try {
+      const { kv } = await import('@vercel/kv')
+      const val = await kv.get<string>(key)
+      return val ?? null
+    } catch (err) {
+      console.error('[kvGet]', key, err)
+      return null
+    }
   }
-  _kv = _kv ?? new Map()
-  return _kv.get(key) ?? null
+  return mem().get(key) ?? null
 }
 
 async function kvSet(key: string, value: string): Promise<void> {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    await fetch(`${process.env.KV_REST_API_URL}/set/${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ value }),
-    })
+  if (isVercelKv()) {
+    try {
+      const { kv } = await import('@vercel/kv')
+      await kv.set(key, value)
+    } catch (err) {
+      console.error('[kvSet]', key, err)
+    }
     return
   }
-  _kv = _kv ?? new Map()
-  _kv.set(key, value)
+  mem().set(key, value)
 }
 
 async function kvDel(key: string): Promise<void> {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    await fetch(`${process.env.KV_REST_API_URL}/del/${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}` },
-    })
+  if (isVercelKv()) {
+    try {
+      const { kv } = await import('@vercel/kv')
+      await kv.del(key)
+    } catch (err) {
+      console.error('[kvDel]', key, err)
+    }
     return
   }
-  _kv = _kv ?? new Map()
-  _kv.delete(key)
+  mem().delete(key)
 }
 
-// ── GENERIC LIST HELPERS ────────────────────────────────────────
+// ── LIST HELPERS ────────────────────────────────────────────────
 
 async function listGet<T>(key: string): Promise<T[]> {
   const raw = await kvGet(key)
@@ -158,13 +165,10 @@ export const leads = {
     return lead
   },
 
-  async list(): Promise<Lead[]> {
-    return listGet<Lead>(LEADS_KEY)
-  },
+  async list(): Promise<Lead[]> { return listGet<Lead>(LEADS_KEY) },
 
   async get(id: string): Promise<Lead | null> {
-    const all = await listGet<Lead>(LEADS_KEY)
-    return all.find(l => l.id === id) ?? null
+    return (await listGet<Lead>(LEADS_KEY)).find(l => l.id === id) ?? null
   },
 
   async update(id: string, patch: Partial<Lead>): Promise<Lead | null> {
@@ -191,11 +195,7 @@ export const smsLogs = {
     await listPush<SmsLog>(SMS_KEY, log)
     return log
   },
-
-  async list(): Promise<SmsLog[]> {
-    return listGet<SmsLog>(SMS_KEY)
-  },
-
+  async list(): Promise<SmsLog[]>  { return listGet<SmsLog>(SMS_KEY) },
   async update(id: string, patch: Partial<SmsLog>): Promise<void> {
     await listUpdate<SmsLog>(SMS_KEY, id, patch)
   },
@@ -211,14 +211,9 @@ export const events = {
     await listPush<Event>(EVENTS_KEY, ev)
     return ev
   },
-
-  async list(): Promise<Event[]> {
-    return listGet<Event>(EVENTS_KEY)
-  },
-
+  async list(): Promise<Event[]> { return listGet<Event>(EVENTS_KEY) },
   async countByType(type: string): Promise<number> {
-    const all = await listGet<Event>(EVENTS_KEY)
-    return all.filter(e => e.type === type).length
+    return (await listGet<Event>(EVENTS_KEY)).filter(e => e.type === type).length
   },
 }
 
@@ -232,17 +227,11 @@ export const pwaInstalls = {
     await listPush<PwaInstall>(PWA_KEY, install)
     return install
   },
-
-  async list(): Promise<PwaInstall[]> {
-    return listGet<PwaInstall>(PWA_KEY)
-  },
-
-  async count(): Promise<number> {
-    return (await listGet<PwaInstall>(PWA_KEY)).length
-  },
+  async list(): Promise<PwaInstall[]> { return listGet<PwaInstall>(PWA_KEY) },
+  async count(): Promise<number>      { return (await listGet<PwaInstall>(PWA_KEY)).length },
 }
 
-// ── METRICS COUNTER (lightweight atomic-ish counter) ────────────
+// ── COUNTERS ────────────────────────────────────────────────────
 
 export const counters = {
   async increment(key: string): Promise<number> {
@@ -251,14 +240,31 @@ export const counters = {
     await kvSet(`bvr:counter:${key}`, String(val))
     return val
   },
-
   async get(key: string): Promise<number> {
     const raw = await kvGet(`bvr:counter:${key}`)
     return parseInt(raw ?? '0', 10) || 0
   },
-
   async set(key: string, val: number): Promise<void> {
     await kvSet(`bvr:counter:${key}`, String(val))
+  },
+}
+
+// ── PLATFORM CONFIG ─────────────────────────────────────────────
+
+const CONFIG_KEY = 'bvr:platform_config'
+
+export const platformConfig = {
+  async get(): Promise<Record<string, any>> {
+    const raw = await kvGet(CONFIG_KEY)
+    if (!raw) return {}
+    try { return JSON.parse(raw) } catch { return {} }
+  },
+  async set(config: Record<string, any>): Promise<void> {
+    await kvSet(CONFIG_KEY, JSON.stringify(config))
+  },
+  async patch(patch: Record<string, any>): Promise<void> {
+    const current = await platformConfig.get()
+    await kvSet(CONFIG_KEY, JSON.stringify({ ...current, ...patch }))
   },
 }
 
@@ -278,7 +284,8 @@ export const ownerVault = {
   },
 
   async exists(): Promise<boolean> {
-    return !!(await kvGet(OWNER_KEY))
+    const val = await kvGet(OWNER_KEY)
+    return val !== null && val !== undefined && val !== ''
   },
 
   async clear(): Promise<void> {
