@@ -1,0 +1,10 @@
+.next/
+node_modules/
+.env
+.env.local
+.env.production
+*.log
+.DS_Store
+public/sw.js
+public/workbox-*.js
+prisma/dev.db
