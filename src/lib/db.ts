@@ -72,24 +72,32 @@ export interface PwaInstall {
 // @vercel/kv in production · in-memory Map in local dev
 
 let _mem: Map<string, string> | null = null
-
 function mem(): Map<string, string> {
   if (!_mem) _mem = new Map()
   return _mem
 }
 
-function isVercelKv(): boolean {
+function hasKvConfig(): boolean {
   return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
 }
 
+// Get a @vercel/kv client instance using env vars directly
+async function getKvClient() {
+  const { createClient } = await import('@vercel/kv')
+  return createClient({
+    url:   process.env.KV_REST_API_URL!,
+    token: process.env.KV_REST_API_TOKEN!,
+  })
+}
+
 async function kvGet(key: string): Promise<string | null> {
-  if (isVercelKv()) {
+  if (hasKvConfig()) {
     try {
-      const { kv } = await import('@vercel/kv')
-      const val = await kv.get<string>(key)
+      const client = await getKvClient()
+      const val = await client.get<string>(key)
       return val ?? null
     } catch (err) {
-      console.error('[kvGet]', key, err)
+      console.error('[kvGet error]', key, err)
       return null
     }
   }
@@ -97,12 +105,12 @@ async function kvGet(key: string): Promise<string | null> {
 }
 
 async function kvSet(key: string, value: string): Promise<void> {
-  if (isVercelKv()) {
+  if (hasKvConfig()) {
     try {
-      const { kv } = await import('@vercel/kv')
-      await kv.set(key, value)
+      const client = await getKvClient()
+      await client.set(key, value)
     } catch (err) {
-      console.error('[kvSet]', key, err)
+      console.error('[kvSet error]', key, err)
     }
     return
   }
@@ -110,12 +118,12 @@ async function kvSet(key: string, value: string): Promise<void> {
 }
 
 async function kvDel(key: string): Promise<void> {
-  if (isVercelKv()) {
+  if (hasKvConfig()) {
     try {
-      const { kv } = await import('@vercel/kv')
-      await kv.del(key)
+      const client = await getKvClient()
+      await client.del(key)
     } catch (err) {
-      console.error('[kvDel]', key, err)
+      console.error('[kvDel error]', key, err)
     }
     return
   }
@@ -155,34 +163,22 @@ const LEADS_KEY = 'bvr:leads'
 
 export const leads = {
   async create(data: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Promise<Lead> {
-    const lead: Lead = {
-      ...data,
-      id:        nanoid(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    const lead: Lead = { ...data, id: nanoid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
     await listPush<Lead>(LEADS_KEY, lead)
     return lead
   },
-
-  async list(): Promise<Lead[]> { return listGet<Lead>(LEADS_KEY) },
-
+  async list(): Promise<Lead[]>  { return listGet<Lead>(LEADS_KEY) },
   async get(id: string): Promise<Lead | null> {
     return (await listGet<Lead>(LEADS_KEY)).find(l => l.id === id) ?? null
   },
-
   async update(id: string, patch: Partial<Lead>): Promise<Lead | null> {
     return listUpdate<Lead>(LEADS_KEY, id, { ...patch, updatedAt: new Date().toISOString() })
   },
-
   async delete(id: string): Promise<void> {
     const all = await listGet<Lead>(LEADS_KEY)
     await kvSet(LEADS_KEY, JSON.stringify(all.filter(l => l.id !== id)))
   },
-
-  async count(): Promise<number> {
-    return (await listGet<Lead>(LEADS_KEY)).length
-  },
+  async count(): Promise<number> { return (await listGet<Lead>(LEADS_KEY)).length },
 }
 
 // ── SMS LOGS ────────────────────────────────────────────────────
@@ -195,7 +191,7 @@ export const smsLogs = {
     await listPush<SmsLog>(SMS_KEY, log)
     return log
   },
-  async list(): Promise<SmsLog[]>  { return listGet<SmsLog>(SMS_KEY) },
+  async list(): Promise<SmsLog[]> { return listGet<SmsLog>(SMS_KEY) },
   async update(id: string, patch: Partial<SmsLog>): Promise<void> {
     await listUpdate<SmsLog>(SMS_KEY, id, patch)
   },
@@ -269,6 +265,8 @@ export const platformConfig = {
 }
 
 // ── OWNER VAULT ─────────────────────────────────────────────────
+// Single owner. Stored as JSON in KV under bvr:owner_vault.
+// Never cleared after first write — setup is one-time only.
 
 const OWNER_KEY = 'bvr:owner_vault'
 
@@ -283,9 +281,16 @@ export const ownerVault = {
     await kvSet(OWNER_KEY, JSON.stringify({ username, passwordHash }))
   },
 
+  // Returns true only if a valid owner record is in KV
   async exists(): Promise<boolean> {
-    const val = await kvGet(OWNER_KEY)
-    return val !== null && val !== undefined && val !== ''
+    try {
+      const raw = await kvGet(OWNER_KEY)
+      if (!raw || raw.trim() === '' || raw === 'null') return false
+      const parsed = JSON.parse(raw)
+      return !!(parsed?.username && parsed?.passwordHash)
+    } catch {
+      return false
+    }
   },
 
   async clear(): Promise<void> {

@@ -7,34 +7,27 @@ const SetupSchema = z.object({
   password: z.string().min(12, 'Password must be at least 12 characters'),
 })
 
-// ── GET: Check whether owner account already exists ─────────────
-// Called by navbar/footer admin button to decide which portal to show.
-// Returns { ownerExists: true } → go to /auth/login
-// Returns { ownerExists: false } → go to /auth/setup (first-time wizard)
+// ── GET: Check whether owner account exists ─────────────────────
+// { ownerExists: true }  → route to /auth/login
+// { ownerExists: false } → route to /auth/setup (first-time wizard)
 export async function GET() {
   try {
     const ownerExists = await hasOwner()
     return NextResponse.json(
       { ownerExists: ownerExists === true },
-      {
-        headers: {
-          // Never cache this — must always be fresh
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Pragma': 'no-cache',
-        },
-      }
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } }
     )
   } catch (err) {
     console.error('[/api/auth/setup GET]', err)
-    // On error, default to login (safer — don't expose setup wizard if KV is down)
+    // KV unreachable — show setup wizard so owner can initialise
     return NextResponse.json(
-      { ownerExists: true },
+      { ownerExists: false },
       { headers: { 'Cache-Control': 'no-store' } }
     )
   }
 }
 
-// ── POST: Create the owner account (one-time only) ──────────────
+// ── POST: Create owner account (one-time only) ──────────────────
 export async function POST(req: NextRequest) {
   try {
     const ownerExists = await hasOwner()
@@ -44,7 +37,6 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       )
     }
-
     const body   = await req.json()
     const parsed = SetupSchema.safeParse(body)
     if (!parsed.success) {
@@ -53,14 +45,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
     const { username, password } = parsed.data
     await createOwner(username, password)
-
-    return NextResponse.json({
-      success: true,
-      message: 'Owner account created. Setup is now permanently locked.',
-    })
+    return NextResponse.json({ success: true, message: 'Owner account created. Setup is now permanently locked.' })
   } catch (err: any) {
     if (err?.message === 'OWNER_EXISTS') {
       return NextResponse.json({ success: false, error: 'Owner already exists' }, { status: 403 })
