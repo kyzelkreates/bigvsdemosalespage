@@ -1,100 +1,154 @@
-# BIG V'S BEST ROUTES — VERCEL DEPLOYMENT GUIDE
+# BIG V'S BEST ROUTES — DEPLOYMENT GUIDE
+
+> **No database required.** This platform runs entirely on Vercel + Vercel KV (serverless Redis).
+> No Supabase. No PostgreSQL. No Prisma. Just deploy and go.
+
+---
 
 ## Quick Deploy
 
-1. Push this project to GitHub
-2. Import to Vercel at vercel.com/import
-3. Set the environment variables below
-4. Deploy — Vercel auto-runs `prisma generate && next build`
-5. Visit `/auth/setup` on first load to create your owner account
+1. Push repo to GitHub (already done)
+2. Go to [vercel.com/import](https://vercel.com/import) → import `kyzelkreates/bigvsdemosalespage`
+3. Add the environment variables below
+4. Click **Deploy**
+5. Visit `https://yourdomain.com/auth/setup` once to create your owner account
+6. After that, access admin via the **5-tap logo easter egg** on the homepage footer
 
 ---
 
-## Required Environment Variables (Vercel Dashboard → Settings → Environment Variables)
+## Environment Variables
+
+Add these in Vercel → Project → Settings → Environment Variables.
+
+### Required
+
+| Variable | Description | Where to get it |
+|---|---|---|
+| `JWT_SECRET` | Random 32+ char string | `openssl rand -base64 32` |
+| `KV_REST_API_URL` | Vercel KV endpoint | Vercel → Storage → KV → `.env.local` tab |
+| `KV_REST_API_TOKEN` | Vercel KV auth token | Same as above |
+
+### Optional (can be set in Admin Dashboard instead)
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string (Supabase/Neon/Railway) |
-| `JWT_SECRET` | Random 32+ char string (`openssl rand -base64 32`) |
-| `TEXTBEE_API_KEY` | Your TextBee API key |
-| `TEXTBEE_DEVICE_ID` | Your TextBee device ID |
-| `ADMIN_PHONE_NUMBER` | Your phone number for SMS alerts (e.g. +447...) |
+| `TEXTBEE_API_KEY` | TextBee API key — or set it live in Admin → SMS |
+| `TEXTBEE_DEVICE_ID` | TextBee device ID — or set it live in Admin → SMS |
+| `ADMIN_PHONE_NUMBER` | Your number for SMS alerts — or set it live in Admin → SMS |
 | `NEXT_PUBLIC_SITE_URL` | Your domain e.g. `https://bigvsbestroutes.com` |
 
----
-
-## Database Setup
-
-### Option A: Supabase (Recommended)
-1. Create project at supabase.com
-2. Copy connection string from Settings → Database
-3. Run: `npx prisma db push` (or it runs automatically on first deploy if you add it to build command)
-
-### Option B: Neon (Serverless PostgreSQL)
-1. Create project at neon.tech
-2. Copy connection string
-3. Add `?sslmode=require` to the end
-
-### Option C: Railway
-1. Create PostgreSQL at railway.app
-2. Copy `DATABASE_URL` from Variables tab
+> **TextBee tip:** You don't need to set the SMS env vars before deploying.
+> After first login, go to **Admin → SMS** and paste your credentials there.
+> They're saved to your KV vault instantly — no redeployment needed.
 
 ---
 
-## Build Command (already set in vercel.json)
-```
-prisma generate && next build
-```
+## Vercel KV Setup (2 minutes)
+
+1. In your Vercel project → **Storage** tab → **Create Database** → **KV**
+2. Name it `bvr-store` (or anything)
+3. Click **Connect to Project**
+4. Vercel auto-injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` — you're done
+
+---
+
+## TextBee SMS Setup
+
+1. Go to [textbee.dev](https://textbee.dev) → create account
+2. Install the TextBee app on your Android phone
+3. Register the device — copy the **Device ID**
+4. Generate an **API Key** in the dashboard
+5. In the admin panel → **SMS** → paste both values + your phone number
+6. Hit **Test** — you'll receive a confirmation SMS immediately
+
+---
 
 ## First Deployment Flow
+
 1. Deploy to Vercel
 2. Visit: `https://yourdomain.com/auth/setup`
-3. Create owner username + password (min 12 chars)
-4. Setup screen locks permanently — only one owner allowed
-5. Login at: `https://yourdomain.com/auth/login`
+3. Create your owner username + password (min 12 characters)
+4. Setup locks permanently — only one owner ever
+5. To access admin again: **tap the logo in the footer 5 times** → redirects to login
+6. After login, go to **Admin → SMS** to configure TextBee
 
 ---
 
-## Architecture Overview
+## Admin Shortcut (Easter Egg)
+
+The homepage footer logo has a **5-tap hidden shortcut**:
+- First time → takes you to `/auth/setup`
+- After setup → takes you to `/auth/login`
+
+No visible admin link is ever shown publicly.
+
+---
+
+## Site Routes
 
 | Path | Description |
 |---|---|
-| `/` | Marketing homepage (SEO landing) |
-| `/features` | Feature list page |
+| `/` | Marketing homepage |
+| `/features` | Feature breakdown |
 | `/use-cases` | Industry use cases |
 | `/demo` | Live fleet simulation dashboard |
+| `/onboarding` | AI-powered 4-step questionnaire + quote |
 | `/contact` | Lead capture form |
 | `/install` | PWA install page |
-| `/auth/setup` | First-time owner setup (locks after use) |
+| `/auth/setup` | First-time owner setup (one-time only) |
 | `/auth/login` | Admin login |
-| `/admin/dashboard` | Intelligence dashboard |
+| `/admin/dashboard` | Intelligence dashboard — leads, PWA, fleet, engagement metrics |
 | `/admin/leads` | Lead CRM pipeline |
-| `/admin/sms` | SMS config & delivery logs |
-| `/admin/system` | System observability |
+| `/admin/sms` | TextBee config + delivery log |
+| `/admin/system` | Live system health checks |
 | `/admin/investor` | Investor-only KPI view |
 
 ---
 
-## SMS Setup (TextBee)
-1. Go to textbee.dev
-2. Create account → Add device (install the TextBee Android app)
-3. Copy API Key and Device ID into Vercel env vars
-4. Set `ADMIN_PHONE_NUMBER` to your number
-5. SMS fires automatically when leads score ≥ 80 or enterprise fleet
+## AI Onboarding → SMS Flow
+
+When a prospect completes `/onboarding`:
+
+1. Their data is scored by the AI (fit score 0–100)
+2. A quote range is calculated (£low – £high)
+3. ROI is projected (fuel, time, cost savings)
+4. **Two SMS messages fire to your phone:**
+   - Lead card (name, company, contact, fleet size, score)
+   - Full AI quote (investment range, scope, confidence %, annual ROI)
 
 ---
 
-## PWA
-- Auto-configured via `next-pwa`
-- Manifest at `/manifest.json`
-- Add icons to `/public/icons/` (sizes: 72, 96, 128, 144, 152, 192, 384, 512)
-- Service worker auto-registered in production
+## Architecture
+
+| Layer | Technology |
+|---|---|
+| Hosting | Vercel (Edge, London region) |
+| Storage | Vercel KV (serverless Redis) |
+| Auth | JWT sessions + KV-backed owner vault |
+| SMS | TextBee (configurable in admin, no redeploy needed) |
+| AI Engine | Serverless — built-in scoring & valuation |
+| PWA | next-pwa + Web App Manifest |
+| Frontend | Next.js 14, TypeScript, Tailwind CSS, Framer Motion |
 
 ---
 
-## RBAC Roles
-- **OWNER**: Full access to everything
-- **ADMIN**: Fleet ops, leads, SMS — no investor view
-- **INVESTOR**: Read-only analytics + investor dashboard
+## PWA Icons
 
-Create additional users directly in the database after setup.
+Add icons to `/public/icons/` in these sizes for full PWA support:
+`72x72`, `96x96`, `128x128`, `144x144`, `152x152`, `192x192`, `384x384`, `512x512`
+
+Format: `icon-{size}.png`
+
+---
+
+## Build Info
+
+```
+Build command:   next build
+Install command: npm install
+Output:          .next
+Node version:    18.x or 20.x
+Region:          lhr1 (London)
+```
+
+No `prisma generate`. No database migrations. Just `next build`.
